@@ -6,6 +6,7 @@ const {
   logViolation,
   completeTechnicalRound,
   getTechnicalRound,
+  getAllUserTechnicalRounds,
 } = require("../controllers/technicalRoundController");
 const { protect } = require("../middlewares/authMiddleware");
 
@@ -16,6 +17,7 @@ router.post("/submit-mcq", protect, submitMCQAnswer);
 router.post("/submit-code", protect, submitCodingAnswer);
 router.post("/log-violation", protect, logViolation);
 router.post("/complete", protect, completeTechnicalRound);
+router.get("/user/all", protect, getAllUserTechnicalRounds);
 router.get("/:id", protect, getTechnicalRound);
 
 module.exports = router;

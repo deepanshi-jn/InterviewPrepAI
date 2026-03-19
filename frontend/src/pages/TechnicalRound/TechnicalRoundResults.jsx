@@ -4,16 +4,14 @@ import {
   LuCircleCheck,
   LuCircleX,
   LuTrophy,
-  LuCode,
   LuFileText,
   LuShieldAlert,
-  LuClock,
   LuArrowLeft,
 } from "react-icons/lu";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPaths";
 import SpinnerLoader from "../../components/Loader/SpinnerLoader";
-import { DashboardLayout } from "../../components/layouts/DashboardLayout";
+import DashboardLayout from "../../components/layouts/DashboardLayout";
 
 const TechnicalRoundResults = () => {
   const { roundId } = useParams();
@@ -26,7 +24,7 @@ const TechnicalRoundResults = () => {
       try {
         setLoading(true);
         const response = await axiosInstance.get(
-          API_PATHS.TECHNICAL_ROUND.GET_ONE(roundId)
+          API_PATHS.TECHNICAL_ROUND.GET_ONE(roundId),
         );
 
         // If not completed, redirect back
@@ -91,8 +89,8 @@ const TechnicalRoundResults = () => {
             isDisqualified
               ? "bg-red-500/10 border-red-500"
               : isPassed
-              ? "bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-500"
-              : "bg-orange-500/10 border-orange-500"
+                ? "bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-500"
+                : "bg-orange-500/10 border-orange-500"
           }`}
         >
           <div className="text-center">
@@ -114,15 +112,15 @@ const TechnicalRoundResults = () => {
               {isDisqualified
                 ? "Disqualified"
                 : isPassed
-                ? "Congratulations!"
-                : "Keep Practicing"}
+                  ? "Congratulations!"
+                  : "Keep Practicing"}
             </h1>
             <p className="text-lg text-slate-300 mb-6">
               {isDisqualified
                 ? "Test was terminated due to policy violations"
                 : isPassed
-                ? "You passed the technical round!"
-                : "You didn't pass this time, but keep learning!"}
+                  ? "You passed the technical round!"
+                  : "You didn't pass this time, but keep learning!"}
             </p>
 
             {!isDisqualified && (
@@ -137,18 +135,12 @@ const TechnicalRoundResults = () => {
             )}
 
             {!isDisqualified && (
-              <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+              <div className="grid grid-cols-1 gap-4 max-w-sm mx-auto">
                 <ScoreCard
                   icon={<LuFileText className="w-5 h-5" />}
                   title="MCQ Score"
                   score={results.mcqScore}
                   color="blue"
-                />
-                <ScoreCard
-                  icon={<LuCode className="w-5 h-5" />}
-                  title="Coding Score"
-                  score={results.codingScore}
-                  color="purple"
                 />
               </div>
             )}
@@ -187,14 +179,14 @@ const TechnicalRoundResults = () => {
 
         {/* MCQ Results */}
         {!isDisqualified && results.mcqQuestions && (
-          <div className="bg-slate-800 rounded-xl p-6 mb-8 border border-slate-700">
+          <div className="bg-white rounded-xl p-6 mb-8 border border-gray-200 shadow-md">
             <div className="flex items-center gap-2 mb-6">
-              <LuFileText className="w-5 h-5 text-blue-400" />
-              <h2 className="text-2xl font-bold">MCQ Results</h2>
-              <span className="ml-auto text-sm text-slate-400">
+              <LuFileText className="w-5 h-5 text-blue-600" />
+              <h2 className="text-2xl font-bold text-gray-800">MCQ Results</h2>
+              <span className="ml-auto text-sm text-gray-600 font-medium">
                 {
                   results.mcqQuestions.filter(
-                    (q, i) => results.mcqAnswers[i] === q.correctAnswer
+                    (q, i) => results.mcqAnswers[i] === q.correctAnswer,
                   ).length
                 }
                 /{results.mcqQuestions.length} Correct
@@ -203,37 +195,50 @@ const TechnicalRoundResults = () => {
 
             <div className="space-y-4">
               {results.mcqQuestions.map((question, index) => {
+                const userAnswer = Number(results.mcqAnswers[index]);
+                const isAnswered =
+                  Number.isInteger(userAnswer) &&
+                  userAnswer >= 0 &&
+                  userAnswer < question.options.length;
                 const isCorrect =
-                  results.mcqAnswers[index] === question.correctAnswer;
-                const userAnswer = results.mcqAnswers[index];
+                  isAnswered && userAnswer === question.correctAnswer;
 
                 return (
                   <div
                     key={index}
                     className={`rounded-xl p-6 border-2 ${
-                      isCorrect
-                        ? "bg-green-500/5 border-green-500/30"
-                        : "bg-red-500/5 border-red-500/30"
+                      !isAnswered
+                        ? "bg-gray-50 border-gray-300"
+                        : isCorrect
+                          ? "bg-green-50 border-green-300"
+                          : "bg-red-50 border-red-300"
                     }`}
                   >
                     <div className="flex items-start gap-3 mb-4">
                       {isCorrect ? (
-                        <LuCircleCheck className="w-5 h-5 text-green-400 mt-1 flex-shrink-0" />
+                        <LuCircleCheck className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
                       ) : (
-                        <LuCircleX className="w-5 h-5 text-red-400 mt-1 flex-shrink-0" />
+                        <LuCircleX className="w-5 h-5 text-red-600 mt-1 flex-shrink-0" />
                       )}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="font-semibold">
+                          <span className="font-semibold text-gray-800">
                             Question {index + 1}
                           </span>
                           {question.category && (
-                            <span className="px-2 py-0.5 bg-slate-700 rounded text-xs">
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
                               {question.category}
                             </span>
                           )}
                         </div>
-                        <p className="text-slate-300">{question.question}</p>
+                        <p className="text-gray-700 font-medium">
+                          {question.question}
+                        </p>
+                        {!isAnswered && (
+                          <p className="mt-2 text-xs font-semibold text-gray-600">
+                            Not answered
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -243,28 +248,28 @@ const TechnicalRoundResults = () => {
                           key={optIndex}
                           className={`p-3 rounded-lg ${
                             optIndex === question.correctAnswer
-                              ? "bg-green-500/20 border border-green-500/50"
+                              ? "bg-green-100 border border-green-400 text-gray-800 font-medium"
                               : optIndex === userAnswer && !isCorrect
-                              ? "bg-red-500/20 border border-red-500/50"
-                              : "bg-slate-700/30"
+                                ? "bg-red-100 border border-red-400 text-gray-800"
+                                : "bg-gray-50 border border-gray-200 text-gray-600"
                           }`}
                         >
                           <div className="flex items-center gap-2">
                             {optIndex === question.correctAnswer && (
-                              <LuCircleCheck className="w-4 h-4 text-green-400" />
+                              <LuCircleCheck className="w-4 h-4 text-green-600" />
                             )}
                             {optIndex === userAnswer && !isCorrect && (
-                              <LuCircleX className="w-4 h-4 text-red-400" />
+                              <LuCircleX className="w-4 h-4 text-red-600" />
                             )}
                             <span className="text-sm">{option}</span>
                             {optIndex === question.correctAnswer && (
-                              <span className="ml-auto text-xs text-green-400 font-medium">
+                              <span className="ml-auto text-xs text-green-700 font-semibold">
                                 Correct Answer
                               </span>
                             )}
                             {optIndex === userAnswer &&
                               optIndex !== question.correctAnswer && (
-                                <span className="ml-auto text-xs text-red-400 font-medium">
+                                <span className="ml-auto text-xs text-red-700 font-semibold">
                                   Your Answer
                                 </span>
                               )}
@@ -272,74 +277,6 @@ const TechnicalRoundResults = () => {
                         </div>
                       ))}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Coding Results */}
-        {!isDisqualified && results.codingQuestions && (
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-            <div className="flex items-center gap-2 mb-6">
-              <LuCode className="w-5 h-5 text-purple-400" />
-              <h2 className="text-2xl font-bold">Coding Submissions</h2>
-            </div>
-
-            <div className="space-y-6">
-              {results.codingQuestions.map((question, index) => {
-                const submission = results.codingAnswers[index];
-                const hasSubmission =
-                  submission?.code && submission.code.trim().length > 0;
-
-                return (
-                  <div
-                    key={index}
-                    className="bg-slate-700/50 rounded-xl p-6 border border-slate-600"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-lg font-bold mb-1">
-                          {question.title}
-                        </h3>
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            question.difficulty === "Easy"
-                              ? "bg-green-500/20 text-green-400"
-                              : question.difficulty === "Medium"
-                              ? "bg-amber-500/20 text-amber-400"
-                              : "bg-red-500/20 text-red-400"
-                          }`}
-                        >
-                          {question.difficulty}
-                        </span>
-                      </div>
-                      {hasSubmission ? (
-                        <div className="flex items-center gap-2 text-green-400">
-                          <LuCircleCheck className="w-5 h-5" />
-                          <span className="text-sm font-medium">Submitted</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-slate-400">
-                          <LuCircleX className="w-5 h-5" />
-                          <span className="text-sm font-medium">
-                            Not Submitted
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {hasSubmission && (
-                      <div className="bg-slate-900 rounded-lg p-4 overflow-x-auto">
-                        <div className="text-xs text-slate-400 mb-2">
-                          Your Solution:
-                        </div>
-                        <pre className="text-sm text-slate-200 font-mono whitespace-pre-wrap">
-                          {submission.code}
-                        </pre>
-                      </div>
-                    )}
                   </div>
                 );
               })}

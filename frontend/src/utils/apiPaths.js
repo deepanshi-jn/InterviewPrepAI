@@ -7,6 +7,13 @@ export const API_PATHS = {
     GET_PROFILE: "/api/auth/profile",
     UPDATE_PROFILE_PHOTO: "/api/auth/profile/photo",
   },
+  TWO_FACTOR: {
+    ENABLE: "/api/2fa/enable",
+    VERIFY: "/api/2fa/verify",
+    DISABLE: "/api/2fa/disable",
+    STATUS: "/api/2fa/status",
+    VALIDATE: "/api/2fa/validate",
+  },
   IMAGE: {
     UPLOAD_IMAGE: "/api/auth/upload-image",
   },
@@ -52,5 +59,6 @@ export const API_PATHS = {
     LOG_VIOLATION: "/api/technical-round/log-violation",
     COMPLETE: "/api/technical-round/complete",
     GET_ONE: (id) => `/api/technical-round/${id}`,
+    GET_ALL: "/api/technical-round/user/all",
   },
 };

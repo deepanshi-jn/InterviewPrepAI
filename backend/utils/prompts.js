@@ -2,7 +2,7 @@ const questionAnswerPrompt = (
   role,
   experience,
   topicsToFocus,
-  numberOfQuestions
+  numberOfQuestions,
 ) => `
     You are an expert interview coach. You are an AI Trained to generate technical interview questions and answers.
     Task:
@@ -10,17 +10,21 @@ const questionAnswerPrompt = (
     - Candidate Experience: ${experience} years
     - Topics to Focus On: ${topicsToFocus}
     - Write ${numberOfQuestions} interview questions.
-    -For each question, generate a detailed but beginner-friendly answer.
-    -if the answer needs a code example, add a small code snippet in the answer or code block inside.
-    -keep formatting clear and concise.
-    -return a pure JSON array of objects with "question" and "answer" fields only.
-    Example output:
-    [   
+    - For each question, generate a detailed but beginner-friendly answer.
+    - If an answer needs a code example, include a short snippet as plain text in the "answer" string.
+    - Keep formatting clear and concise.
+    - Return a pure JSON array of objects with ONLY "question" and "answer" fields.
+    - IMPORTANT JSON RULES:
+      1) Return ONLY valid JSON (no markdown, no backticks, no comments).
+      2) Do NOT include trailing commas.
+      3) Escape all double quotes inside string values.
+      4) Ensure newline characters are escaped correctly in JSON strings.
+    Example valid shape:
+    [
       {
         "question": "What is a closure in JavaScript?",
-        "answer": "A closure is a feature in JavaScript where an inner function has access to the outer (enclosing) function's variables..."
-      },
-    ...
+        "answer": "A closure is a feature in JavaScript where an inner function can access variables from its outer scope."
+      }
     ]
     Important: Return only the JSON array, no extra explanations or text.
     `;
@@ -44,7 +48,7 @@ const aiInterviewerPrompt = (
   role,
   experience,
   topicsToFocus,
-  conversationHistory
+  conversationHistory,
 ) => {
   const historyContext =
     conversationHistory.length > 0
@@ -53,7 +57,7 @@ const aiInterviewerPrompt = (
             (msg) =>
               `${msg.role === "user" ? "Candidate" : "Interviewer"}: ${
                 msg.message
-              }`
+              }`,
           )
           .join("\n")
       : "";
@@ -88,7 +92,7 @@ const interviewAnalysisPrompt = (role, experience, conversationHistory) => {
   const conversation = conversationHistory
     .map(
       (msg) =>
-        `${msg.role === "user" ? "Candidate" : "Interviewer"}: ${msg.message}`
+        `${msg.role === "user" ? "Candidate" : "Interviewer"}: ${msg.message}`,
     )
     .join("\n");
 

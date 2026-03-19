@@ -14,7 +14,7 @@ import {
   LuClock,
   LuTriangleAlert,
 } from "react-icons/lu";
-import { DashboardLayout } from "../../components/layouts/DashboardLayout";
+import DashboardLayout from "../../components/layouts/DashboardLayout";
 import axiosInstance from "../../utils/axiosInstance";
 import { API_PATHS } from "../../utils/apiPaths";
 import toast from "react-hot-toast";
@@ -39,6 +39,7 @@ const AIInterview = () => {
   const [timeRemaining, setTimeRemaining] = useState(duration * 60); // in seconds
   const [timerActive, setTimerActive] = useState(false);
   const [showQuitModal, setShowQuitModal] = useState(false);
+  const [isCompletingInterview, setIsCompletingInterview] = useState(false);
 
   const recognitionRef = useRef(null);
   const synthRef = useRef(window.speechSynthesis);
@@ -77,24 +78,46 @@ const AIInterview = () => {
       const SpeechRecognition =
         window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
+      recognitionRef.current.continuous = true; // Changed to true for continuous listening
+      recognitionRef.current.interimResults = true; // Show interim results
       recognitionRef.current.lang = "en-US";
 
       recognitionRef.current.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setUserInput(transcript);
-        setIsListening(false);
+        let interimTranscript = "";
+        let finalTranscript = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + " ";
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+
+        // Append to existing input instead of replacing
+        if (finalTranscript) {
+          setUserInput((prev) => (prev + " " + finalTranscript).trim());
+        }
       };
 
       recognitionRef.current.onerror = (event) => {
         console.error("Speech recognition error:", event.error);
-        setIsListening(false);
-        toast.error("Could not capture voice. Please try again.");
+        if (event.error !== "no-speech") {
+          setIsListening(false);
+          toast.error("Could not capture voice. Please try again.");
+        }
       };
 
       recognitionRef.current.onend = () => {
-        setIsListening(false);
+        // Auto-restart if still supposed to be listening
+        if (isListening) {
+          try {
+            recognitionRef.current.start();
+          } catch (e) {
+            setIsListening(false);
+          }
+        }
       };
     }
 
@@ -170,9 +193,14 @@ const AIInterview = () => {
 
   const startListening = () => {
     if (recognitionRef.current && !isListening) {
-      setUserInput("");
+      // Don't clear existing input - append to it
       setIsListening(true);
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.start();
+      } catch (error) {
+        console.error("Error starting recognition:", error);
+        setIsListening(false);
+      }
     }
   };
 
@@ -234,7 +262,11 @@ const AIInterview = () => {
   };
 
   const completeInterview = async () => {
+    // Prevent double submission
+    if (isCompletingInterview) return;
+
     try {
+      setIsCompletingInterview(true);
       // Stop timer
       setTimerActive(false);
 
@@ -248,6 +280,7 @@ const AIInterview = () => {
     } catch (error) {
       console.error("Error completing interview:", error);
       toast.error("Failed to complete interview");
+      setIsCompletingInterview(false);
     }
   };
 
@@ -276,15 +309,18 @@ const AIInterview = () => {
   const handleQuitInterview = () => {
     // Stop timer and audio
     setTimerActive(false);
+    setIsCompletingInterview(true); // Prevent any accidental completion
     if (synthRef.current) {
       synthRef.current.cancel();
     }
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
-    handleBackClick;
+    setShowQuitModal(false);
 
-    toast.success("Interview cancelled. No report will be generated.");
+    toast.error(
+      "Interview cancelled. No performance report will be generated."
+    );
     navigate(`/interview-prep/${sessionId}`);
   };
 
@@ -309,7 +345,7 @@ const AIInterview = () => {
           {/* Header */}
           <div className="mb-6">
             <button
-              onClick={() => navigate(-1)}
+              onClick={handleBackClick}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors"
             >
               <LuArrowLeft className="w-5 h-5" />

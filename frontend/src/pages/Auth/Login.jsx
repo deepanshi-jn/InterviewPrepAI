@@ -10,6 +10,9 @@ const Login = ({ setCurrentPage, closeModal }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
+  const [showTwoFactorInput, setShowTwoFactorInput] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [userId, setUserId] = useState(null);
 
   const { updateUser } = useContext(UserContext);
   const navigate = useNavigate();
@@ -29,7 +32,17 @@ const Login = ({ setCurrentPage, closeModal }) => {
       const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, {
         email,
         password,
+        twoFactorToken: twoFactorCode || undefined,
       });
+
+      // Check if 2FA is required
+      if (response.data.requiresTwoFactor) {
+        setShowTwoFactorInput(true);
+        setUserId(response.data.userId);
+        setError(""); // Clear any previous errors
+        return;
+      }
+
       const { token } = response.data;
       if (token) {
         localStorage.setItem("token", token);
@@ -63,6 +76,7 @@ const Login = ({ setCurrentPage, closeModal }) => {
           label="Email Address"
           placeholder="john@example.com"
           type="email"
+          disabled={showTwoFactorInput}
         />
         <Input
           value={password}
@@ -75,7 +89,24 @@ const Login = ({ setCurrentPage, closeModal }) => {
           label="Password"
           placeholder="Min 8 characters"
           type="password"
+          disabled={showTwoFactorInput}
         />
+
+        {showTwoFactorInput && (
+          <div className="space-y-2">
+            <Input
+              value={twoFactorCode}
+              onChange={(e) => setTwoFactorCode(e.target.value)}
+              label="Two-Factor Authentication Code"
+              placeholder="Enter 6-digit code"
+              type="text"
+              maxLength={6}
+            />
+            <p className="text-xs text-gray-600">
+              Enter the 6-digit code from your authenticator app
+            </p>
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-xs">
@@ -87,7 +118,7 @@ const Login = ({ setCurrentPage, closeModal }) => {
           type="submit"
           className="w-full py-2.5 bg-gradient-to-r from-[#FF9324] to-[#FFA94D] hover:from-[#e68420] hover:to-[#e69540] text-white font-medium rounded-lg transition-all mt-4 text-sm"
         >
-          LOGIN
+          {showTwoFactorInput ? "VERIFY CODE" : "LOGIN"}
         </button>
 
         <p className="text-xs text-gray-600 text-center mt-3">

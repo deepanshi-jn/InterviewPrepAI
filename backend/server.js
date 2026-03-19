@@ -10,6 +10,7 @@ const questionRoutes = require("./routes/questionRoutes");
 const interviewRoutes = require("./routes/interviewRoutes");
 const moduleRoutes = require("./routes/moduleRoutes");
 const technicalRoundRoutes = require("./routes/technicalRoundRoutes");
+const twoFactorRoutes = require("./routes/twoFactorRoutes");
 const { protect } = require("./middlewares/authMiddleware");
 const {
   generateInterviewQuestions,
@@ -44,6 +45,7 @@ app.use("/api/questions", questionRoutes);
 app.use("/api/interviews", interviewRoutes);
 app.use("/api/modules", moduleRoutes);
 app.use("/api/technical-round", technicalRoundRoutes);
+app.use("/api/2fa", twoFactorRoutes);
 
 app.use("/api/ai/generate-questions", protect, generateInterviewQuestions);
 app.use("/api/ai/generate-explanation", protect, generateConceptExplanation);

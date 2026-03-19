@@ -2,6 +2,21 @@ const TechnicalRound = require("../models/TechnicalRound");
 const Session = require("../models/Session");
 const { generateAIResponse } = require("./aiController");
 
+const normalizeMcqAnswers = (answers, questions) => {
+  return questions.map((q, index) => {
+    const value = answers?.[index];
+    const parsed = Number(value);
+    if (
+      Number.isInteger(parsed) &&
+      parsed >= 0 &&
+      parsed < (q.options?.length || 0)
+    ) {
+      return parsed;
+    }
+    return -1;
+  });
+};
+
 //@desc    Generate and start technical round for a session
 //@route   POST /api/technical-round/start
 //@access  Private
@@ -32,6 +47,19 @@ const startTechnicalRound = async (req, res) => {
 
     // If round is in progress, return it (allow resume)
     if (technicalRound && technicalRound.status === "in_progress") {
+      const normalizedAnswers = normalizeMcqAnswers(
+        technicalRound.mcqAnswers,
+        technicalRound.mcqQuestions,
+      );
+
+      if (
+        JSON.stringify(normalizedAnswers) !==
+        JSON.stringify(technicalRound.mcqAnswers)
+      ) {
+        technicalRound.mcqAnswers = normalizedAnswers;
+        await technicalRound.save();
+      }
+
       // Return questions without correct answers for security
       const safeRound = {
         _id: technicalRound._id,
@@ -40,16 +68,7 @@ const startTechnicalRound = async (req, res) => {
           options: q.options,
           category: q.category,
         })),
-        codingQuestions: technicalRound.codingQuestions.map((q) => ({
-          _id: q._id,
-          title: q.title,
-          description: q.description,
-          difficulty: q.difficulty,
-          testCases: q.testCases.filter((tc) => !tc.isHidden),
-          starterCode: q.starterCode,
-        })),
-        mcqAnswers: technicalRound.mcqAnswers,
-        codingAnswers: technicalRound.codingAnswers,
+        mcqAnswers: normalizedAnswers,
         status: technicalRound.status,
         timeRemaining: technicalRound.timeRemaining,
         duration: technicalRound.duration,
@@ -63,7 +82,7 @@ const startTechnicalRound = async (req, res) => {
       });
     }
 
-    // Generate MCQ and Coding questions using AI
+    // Generate MCQ questions using AI
     const mcqPrompt = `Generate 10 multiple choice questions for a ${session.role} position with ${session.experience} years of experience. Topics: ${session.topicsToFocus}.
 
 Return a JSON array with this structure:
@@ -78,52 +97,33 @@ Return a JSON array with this structure:
 
 Important: Return only valid JSON array, no extra text.`;
 
-    const codingPrompt = `Generate 2 coding problems for a ${session.role} position with ${session.experience} years of experience. Topics: ${session.topicsToFocus}.
-
-One should be Easy difficulty, another Medium difficulty. Include test cases.
-
-Return a JSON array with this structure:
-[
-  {
-    "title": "Problem Title",
-    "description": "Detailed problem description with examples",
-    "difficulty": "Easy",
-    "testCases": [
-      {"input": "input example", "expectedOutput": "output example", "isHidden": false}
-    ],
-    "starterCode": "function solution() {\\n  // Your code here\\n}"
-  }
-]
-
-Important: 
-- Return only valid JSON array, no extra text.
-- difficulty must be exactly one of: "Easy", "Medium", or "Hard"`;
-
-    const [mcqResponse, codingResponse] = await Promise.all([
-      generateAIResponse(mcqPrompt),
-      generateAIResponse(codingPrompt),
-    ]);
+    const mcqResponse = await generateAIResponse(mcqPrompt);
 
     const mcqQuestions = JSON.parse(mcqResponse);
-    const codingQuestions = JSON.parse(codingResponse);
 
     if (!technicalRound) {
       technicalRound = new TechnicalRound({
         session: sessionId,
         user: userId,
         mcqQuestions,
-        codingQuestions,
         mcqAnswers: new Array(10).fill(-1),
-        codingAnswers: [{ code: "" }, { code: "" }],
+        codingQuestions: [],
+        codingAnswers: [],
         status: "in_progress",
         startedAt: new Date(),
         timeRemaining: 1800, // 30 minutes
       });
     } else {
       technicalRound.mcqQuestions = mcqQuestions;
-      technicalRound.codingQuestions = codingQuestions;
+      technicalRound.mcqAnswers = new Array(mcqQuestions.length).fill(-1);
+      technicalRound.codingQuestions = [];
+      technicalRound.codingAnswers = [];
       technicalRound.status = "in_progress";
       technicalRound.startedAt = new Date();
+      technicalRound.timeRemaining = technicalRound.duration || 1800;
+      technicalRound.violations = [];
+      technicalRound.cheatingDetected = false;
+      technicalRound.completedAt = undefined;
     }
 
     await technicalRound.save();
@@ -136,21 +136,10 @@ Important:
         options: q.options,
         category: q.category,
       })),
-      codingQuestions: technicalRound.codingQuestions.map((q) => ({
-        _id: q._id,
-        title: q.title,
-        description: q.description,
-        difficulty: q.difficulty,
-        starterCode: q.starterCode,
-        testCases: q.testCases
-          .filter((tc) => !tc.isHidden)
-          .map((tc) => ({
-            input: tc.input,
-            expectedOutput: tc.expectedOutput,
-          })),
-      })),
-      mcqAnswers: technicalRound.mcqAnswers,
-      codingAnswers: technicalRound.codingAnswers,
+      mcqAnswers: normalizeMcqAnswers(
+        technicalRound.mcqAnswers,
+        technicalRound.mcqQuestions,
+      ),
       status: technicalRound.status,
       startedAt: technicalRound.startedAt,
       duration: technicalRound.duration,
@@ -182,7 +171,29 @@ const submitMCQAnswer = async (req, res) => {
         .json({ message: "Technical round is not in progress" });
     }
 
-    technicalRound.mcqAnswers[questionIndex] = answer;
+    const qIndex = Number(questionIndex);
+    const selectedAnswer = Number(answer);
+
+    if (
+      !Number.isInteger(qIndex) ||
+      qIndex < 0 ||
+      qIndex >= technicalRound.mcqQuestions.length
+    ) {
+      return res.status(400).json({ message: "Invalid question index" });
+    }
+
+    const question = technicalRound.mcqQuestions[qIndex];
+    const optionCount = question?.options?.length || 0;
+
+    if (
+      !Number.isInteger(selectedAnswer) ||
+      selectedAnswer < 0 ||
+      selectedAnswer >= optionCount
+    ) {
+      return res.status(400).json({ message: "Invalid answer option" });
+    }
+
+    technicalRound.mcqAnswers[qIndex] = selectedAnswer;
     await technicalRound.save();
 
     res.status(200).json({ message: "Answer saved", success: true });
@@ -196,27 +207,11 @@ const submitMCQAnswer = async (req, res) => {
 //@access  Private
 const submitCodingAnswer = async (req, res) => {
   try {
-    const { technicalRoundId, questionIndex, code, language } = req.body;
-
-    const technicalRound = await TechnicalRound.findById(technicalRoundId);
-    if (!technicalRound) {
-      return res.status(404).json({ message: "Technical round not found" });
-    }
-
-    if (technicalRound.status !== "in_progress") {
-      return res
-        .status(400)
-        .json({ message: "Technical round is not in progress" });
-    }
-
-    technicalRound.codingAnswers[questionIndex] = {
-      code,
-      language: language || "javascript",
-      submittedAt: new Date(),
-    };
-    await technicalRound.save();
-
-    res.status(200).json({ message: "Code saved", success: true });
+    res.status(410).json({
+      message:
+        "Coding section has been removed. Technical round now supports MCQs only.",
+      success: false,
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -242,7 +237,7 @@ const logViolation = async (req, res) => {
 
     // Auto-disqualify on severe violations
     const severeViolations = technicalRound.violations.filter(
-      (v) => v.type === "tab_switch" || v.type === "fullscreen_exit"
+      (v) => v.type === "tab_switch" || v.type === "fullscreen_exit",
     ).length;
 
     if (severeViolations >= 3) {
@@ -282,6 +277,11 @@ const completeTechnicalRound = async (req, res) => {
     }
 
     // Calculate MCQ score
+    technicalRound.mcqAnswers = normalizeMcqAnswers(
+      technicalRound.mcqAnswers,
+      technicalRound.mcqQuestions,
+    );
+
     let mcqCorrect = 0;
     technicalRound.mcqQuestions.forEach((q, index) => {
       if (technicalRound.mcqAnswers[index] === q.correctAnswer) {
@@ -290,15 +290,10 @@ const completeTechnicalRound = async (req, res) => {
     });
     technicalRound.mcqScore = (mcqCorrect / 10) * 100;
 
-    // For now, coding score is based on submission (manual review needed in real scenario)
-    const codingSubmitted = technicalRound.codingAnswers.filter(
-      (a) => a.code && a.code.trim().length > 0
-    ).length;
-    technicalRound.codingScore = (codingSubmitted / 2) * 100;
+    technicalRound.codingScore = 0;
 
-    // Total score (60% MCQ, 40% Coding)
-    technicalRound.totalScore =
-      technicalRound.mcqScore * 0.6 + technicalRound.codingScore * 0.4;
+    // Total score based on MCQs only
+    technicalRound.totalScore = technicalRound.mcqScore;
     technicalRound.passed =
       technicalRound.totalScore >= 60 && !technicalRound.cheatingDetected;
     technicalRound.status = "completed";
@@ -310,7 +305,6 @@ const completeTechnicalRound = async (req, res) => {
     const results = {
       _id: technicalRound._id,
       mcqScore: technicalRound.mcqScore,
-      codingScore: technicalRound.codingScore,
       totalScore: technicalRound.totalScore,
       passed: technicalRound.passed,
       mcqResults: technicalRound.mcqQuestions.map((q, index) => ({
@@ -320,12 +314,6 @@ const completeTechnicalRound = async (req, res) => {
         userAnswer: technicalRound.mcqAnswers[index],
         isCorrect: technicalRound.mcqAnswers[index] === q.correctAnswer,
         category: q.category,
-      })),
-      codingResults: technicalRound.codingQuestions.map((q, index) => ({
-        title: q.title,
-        description: q.description,
-        userCode: technicalRound.codingAnswers[index]?.code,
-        submittedAt: technicalRound.codingAnswers[index]?.submittedAt,
       })),
       violations: technicalRound.violations,
       cheatingDetected: technicalRound.cheatingDetected,
@@ -345,9 +333,8 @@ const completeTechnicalRound = async (req, res) => {
 const getTechnicalRound = async (req, res) => {
   try {
     const { id } = req.params;
-    const technicalRound = await TechnicalRound.findById(id).populate(
-      "session"
-    );
+    const technicalRound =
+      await TechnicalRound.findById(id).populate("session");
 
     if (!technicalRound) {
       return res.status(404).json({ message: "Technical round not found" });
@@ -374,6 +361,23 @@ const getTechnicalRound = async (req, res) => {
   }
 };
 
+//@desc    Get all technical rounds for a user
+//@route   GET /api/technical-round/user/all
+//@access  Private
+const getAllUserTechnicalRounds = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const technicalRounds = await TechnicalRound.find({ user: userId })
+      .populate("session", "role experience topicsToFocus")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ technicalRounds });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   startTechnicalRound,
   submitMCQAnswer,
@@ -381,4 +385,5 @@ module.exports = {
   logViolation,
   completeTechnicalRound,
   getTechnicalRound,
+  getAllUserTechnicalRounds,
 };

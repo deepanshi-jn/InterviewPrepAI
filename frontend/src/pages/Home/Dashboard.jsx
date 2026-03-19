@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { LuPlus } from "react-icons/lu";
 import { CARD_BG } from "../../utils/data";
 import toast from "react-hot-toast";
-import { DashboardLayout } from "../../components/layouts/DashboardLayout.jsx";
+import DashboardLayout from "../../components/layouts/DashboardLayout.jsx";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance.js";
 import { API_PATHS } from "../../utils/apiPaths.js";

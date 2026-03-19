@@ -1,7 +1,7 @@
 import React from "react";
 import ProfileInfoCard from "../Cards/ProfileInfoCard.jsx";
 import { Link, useLocation } from "react-router-dom";
-import { LuFileText, LuLayoutDashboard } from "react-icons/lu";
+import { LuFileText, LuLayoutDashboard, LuSettings } from "react-icons/lu";
 
 export const Navbar = () => {
   const location = useLocation();
@@ -42,6 +42,17 @@ export const Navbar = () => {
             >
               <LuFileText className="w-4 h-4" />
               Reports
+            </Link>
+            <Link
+              to="/settings"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                isActive("/settings")
+                  ? "bg-amber-50 text-amber-600"
+                  : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <LuSettings className="w-4 h-4" />
+              Settings
             </Link>
           </nav>
         </div>

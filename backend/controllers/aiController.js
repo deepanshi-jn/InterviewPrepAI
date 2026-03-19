@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { jsonrepair } = require("jsonrepair");
 const {
   conceptExplainPrompt,
   questionAnswerPrompt,
@@ -9,22 +10,73 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Helper function to sanitize JSON string
 const sanitizeJSON = (jsonString) => {
-  try {
-    // First attempt: try parsing as-is
-    return JSON.parse(jsonString);
-  } catch (error) {
-    // If parsing fails, clean the string
-    // Remove any JSON markdown code blocks if present
-    let cleaned = jsonString.trim();
-    if (cleaned.startsWith("```json")) {
-      cleaned = cleaned.replace(/^```json\s*/, "").replace(/```\s*$/, "");
-    } else if (cleaned.startsWith("```")) {
-      cleaned = cleaned.replace(/^```\s*/, "").replace(/```\s*$/, "");
+  if (typeof jsonString !== "string" || !jsonString.trim()) {
+    throw new Error("Empty AI response");
+  }
+
+  const stripCodeFences = (text) => {
+    const trimmed = text.trim();
+    if (trimmed.startsWith("```json")) {
+      return trimmed.replace(/^```json\s*/, "").replace(/```\s*$/, "");
+    }
+    if (trimmed.startsWith("```")) {
+      return trimmed.replace(/^```\s*/, "").replace(/```\s*$/, "");
+    }
+    return trimmed;
+  };
+
+  const extractLikelyJson = (text) => {
+    const firstBrace = text.indexOf("{");
+    const firstBracket = text.indexOf("[");
+
+    let start = -1;
+    let open = "";
+    let close = "";
+
+    if (firstBrace === -1 && firstBracket === -1) return text;
+
+    if (firstBrace === -1 || (firstBracket !== -1 && firstBracket < firstBrace)) {
+      start = firstBracket;
+      open = "[";
+      close = "]";
+    } else {
+      start = firstBrace;
+      open = "{";
+      close = "}";
     }
 
-    // Try parsing the cleaned string
-    return JSON.parse(cleaned);
+    const end = text.lastIndexOf(close);
+    if (start !== -1 && end !== -1 && end > start) {
+      return text.slice(start, end + 1);
+    }
+
+    return text;
+  };
+
+  const attempts = [];
+
+  const raw = jsonString.trim();
+  attempts.push(raw);
+
+  const noFence = stripCodeFences(raw);
+  if (noFence !== raw) attempts.push(noFence);
+
+  const extracted = extractLikelyJson(noFence);
+  if (extracted !== noFence) attempts.push(extracted);
+
+  for (const candidate of attempts) {
+    try {
+      return JSON.parse(candidate);
+    } catch (_) {
+      try {
+        return JSON.parse(jsonrepair(candidate));
+      } catch (_) {
+        // continue
+      }
+    }
   }
+
+  throw new Error("AI returned malformed JSON");
 };
 
 //@desc    Generate interview questions and answers using AI
@@ -63,7 +115,10 @@ const generateInterviewQuestions = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Server error",
-      error: error.message,
+      error:
+        error.message === "AI returned malformed JSON"
+          ? "AI generated invalid JSON. Please try again."
+          : error.message,
     });
   }
 };
@@ -95,7 +150,10 @@ const generateConceptExplanation = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Server error",
-      error: error.message,
+      error:
+        error.message === "AI returned malformed JSON"
+          ? "AI generated invalid JSON. Please try again."
+          : error.message,
     });
   }
 };
@@ -130,7 +188,10 @@ const suggestTopics = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Server error",
-      error: error.message,
+      error:
+        error.message === "AI returned malformed JSON"
+          ? "AI generated invalid JSON. Please try again."
+          : error.message,
     });
   }
 };

@@ -50,7 +50,7 @@ const registerUser = async (req, res) => {
 //@access  Public
 const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, twoFactorToken } = req.body;
 
     // Check if user already exists
     const user = await User.findOne({ email });
@@ -62,12 +62,39 @@ const loginUser = async (req, res) => {
     if (!isMatch) {
       return res.status(500).json({ message: "Invalid credentials" });
     }
-    // Return user data with JWT
+
+    // If 2FA is enabled, check if token is provided and valid
+    if (user.twoFactorEnabled) {
+      if (!twoFactorToken) {
+        // Password is correct, but 2FA code is required
+        return res.status(200).json({
+          requiresTwoFactor: true,
+          userId: user._id,
+          message: "Please enter your 2FA code",
+        });
+      }
+
+      // Verify the 2FA token
+      const speakeasy = require("speakeasy");
+      const verified = speakeasy.totp.verify({
+        secret: user.twoFactorSecret,
+        encoding: "base32",
+        token: twoFactorToken,
+        window: 2,
+      });
+
+      if (!verified) {
+        return res.status(400).json({ message: "Invalid 2FA code" });
+      }
+    }
+
+    // Password verified (and 2FA if enabled) - issue token
     res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
       profileImageUrl: user.profileImageUrl,
+      twoFactorEnabled: user.twoFactorEnabled,
       token: generateToken(user._id),
     });
   } catch (error) {

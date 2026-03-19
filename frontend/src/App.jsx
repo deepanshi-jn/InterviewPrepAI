@@ -10,6 +10,7 @@ import InterviewResults from "./pages/AIInterview/InterviewResults";
 import InterviewHistory from "./pages/InterviewHistory";
 import TechnicalRound from "./pages/TechnicalRound/TechnicalRound";
 import TechnicalRoundResults from "./pages/TechnicalRound/TechnicalRoundResults";
+import Settings from "./pages/Settings/Settings";
 import { UserProvider } from "./context/userContext.jsx";
 
 const App = () => {
@@ -21,6 +22,7 @@ const App = () => {
             <Route path="/" element={<LandingPage />} />
 
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/settings" element={<Settings />} />
             <Route
               path="/interview-prep/:sessionId"
               element={<InterviewPrep />}

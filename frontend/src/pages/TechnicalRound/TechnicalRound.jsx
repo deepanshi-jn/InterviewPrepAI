@@ -5,7 +5,6 @@ import {
   LuTriangleAlert,
   LuCircleCheck,
   LuCircleX,
-  LuCode,
   LuFileText,
   LuCamera,
   LuMaximize,
@@ -29,14 +28,9 @@ const TechnicalRound = () => {
   // State
   const [loading, setLoading] = useState(true);
   const [technicalRound, setTechnicalRound] = useState(null);
-  const [currentSection, setCurrentSection] = useState("instructions"); // instructions, mcq, coding
+  const [currentSection, setCurrentSection] = useState("instructions"); // instructions, mcq
   const [currentMCQIndex, setCurrentMCQIndex] = useState(0);
-  const [currentCodingIndex, setCurrentCodingIndex] = useState(0);
   const [mcqAnswers, setMcqAnswers] = useState([]);
-  const [codingAnswers, setCodingAnswers] = useState([
-    { code: "" },
-    { code: "" },
-  ]);
   const [timeRemaining, setTimeRemaining] = useState(1800);
   const [violations, setViolations] = useState([]);
 
@@ -69,7 +63,7 @@ const TechnicalRound = () => {
           API_PATHS.TECHNICAL_ROUND.START,
           {
             sessionId,
-          }
+          },
         );
 
         const roundData = response.data.technicalRound;
@@ -82,25 +76,19 @@ const TechnicalRound = () => {
           setMcqAnswers(new Array(10).fill(-1));
         }
 
-        if (roundData.codingAnswers && roundData.codingAnswers.length > 0) {
-          setCodingAnswers(roundData.codingAnswers);
-        } else {
-          setCodingAnswers([{ code: "" }, { code: "" }]);
-        }
-
         // Use timeRemaining if available (resumed session), otherwise use duration
         setTimeRemaining(roundData.timeRemaining || roundData.duration);
 
         // Show toast if resuming
         if (response.data.message === "Resuming technical round") {
           toast.success(
-            "Resuming your technical round. Enable camera to continue."
+            "Resuming your technical round. Enable camera to continue.",
           );
         }
       } catch (error) {
         console.error("Failed to initialize technical round:", error);
         toast.error(
-          error.response?.data?.message || "Failed to start technical round"
+          error.response?.data?.message || "Failed to start technical round",
         );
         navigate(`/interview-prep/${sessionId}`);
       } finally {
@@ -214,11 +202,11 @@ const TechnicalRound = () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener(
         "webkitfullscreenchange",
-        handleFullscreenChange
+        handleFullscreenChange,
       );
       document.removeEventListener(
         "msfullscreenchange",
-        handleFullscreenChange
+        handleFullscreenChange,
       );
     };
   }, [currentSection]);
@@ -248,7 +236,7 @@ const TechnicalRound = () => {
           technicalRoundId: technicalRound._id,
           type,
           severity,
-        }
+        },
       );
 
       setViolations((prev) => [
@@ -260,7 +248,7 @@ const TechnicalRound = () => {
         handleAutoSubmit("Disqualified due to violations");
       } else if (response.data.violationCount >= 2) {
         toast.error(
-          `⚠️ Warning ${response.data.violationCount}/3: One more violation will result in disqualification!`
+          `⚠️ Warning ${response.data.violationCount}/3: One more violation will result in disqualification!`,
         );
       }
     } catch (error) {
@@ -296,23 +284,6 @@ const TechnicalRound = () => {
     }
   };
 
-  // Submit coding answer
-  const handleCodingAnswer = async (questionIndex, code) => {
-    const newAnswers = [...codingAnswers];
-    newAnswers[questionIndex] = { code };
-    setCodingAnswers(newAnswers);
-
-    try {
-      await axiosInstance.post(API_PATHS.TECHNICAL_ROUND.SUBMIT_CODE, {
-        technicalRoundId: technicalRound._id,
-        questionIndex,
-        code,
-      });
-    } catch (error) {
-      console.error("Failed to save coding answer:", error);
-    }
-  };
-
   // Auto submit
   const handleAutoSubmit = async (reason) => {
     toast.error(`Test ended: ${reason}`);
@@ -327,10 +298,18 @@ const TechnicalRound = () => {
         API_PATHS.TECHNICAL_ROUND.COMPLETE,
         {
           technicalRoundId: technicalRound._id,
-        }
+        },
       );
 
       toast.success("Technical round completed!");
+
+      // Stop camera
+      if (videoRef.current && videoRef.current.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks();
+        tracks.forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
+        setCameraEnabled(false);
+      }
 
       // Exit fullscreen
       if (document.exitFullscreen) {
@@ -435,9 +414,7 @@ const TechnicalRound = () => {
 
             {/* Section */}
             <div className="text-sm bg-slate-700 px-3 py-1 rounded-lg">
-              {currentSection === "mcq"
-                ? `MCQ ${currentMCQIndex + 1}/10`
-                : `Coding ${currentCodingIndex + 1}/2`}
+              {`MCQ ${currentMCQIndex + 1}/10`}
             </div>
           </div>
         </div>
@@ -494,35 +471,17 @@ const TechnicalRound = () => {
             currentIndex={currentMCQIndex}
             answers={mcqAnswers}
             onAnswer={handleMCQAnswer}
+            onSubmit={handleCompleteTest}
+            isSubmitting={isSubmitting}
             onNext={() => {
               if (currentMCQIndex < 9) {
                 setCurrentMCQIndex(currentMCQIndex + 1);
-              } else {
-                setCurrentSection("coding");
-                setCurrentCodingIndex(0);
               }
             }}
             onPrevious={() =>
               currentMCQIndex > 0 && setCurrentMCQIndex(currentMCQIndex - 1)
             }
             onGoToQuestion={(index) => setCurrentMCQIndex(index)}
-          />
-        )}
-
-        {/* Coding Section */}
-        {currentSection === "coding" && (
-          <CodingSection
-            questions={technicalRound.codingQuestions}
-            currentIndex={currentCodingIndex}
-            answers={codingAnswers}
-            onCodeChange={(index, code) => handleCodingAnswer(index, code)}
-            onNext={() => currentCodingIndex < 1 && setCurrentCodingIndex(1)}
-            onPrevious={() =>
-              currentCodingIndex > 0 && setCurrentCodingIndex(0)
-            }
-            onBackToMCQ={() => setCurrentSection("mcq")}
-            onSubmit={handleCompleteTest}
-            isSubmitting={isSubmitting}
           />
         )}
       </div>
@@ -554,7 +513,6 @@ const InstructionsScreen = ({ onStart, cameraEnabled, onEnableCamera }) => {
           >
             <ul className="space-y-2 text-slate-300">
               <li>• 10 Multiple Choice Questions (MCQs)</li>
-              <li>• 2 Coding Problems</li>
               <li>• Total Duration: 30 minutes</li>
               <li>• Passing Score: 60%</li>
             </ul>
@@ -648,6 +606,8 @@ const MCQSection = ({
   currentIndex,
   answers,
   onAnswer,
+  onSubmit,
+  isSubmitting,
   onNext,
   onPrevious,
   onGoToQuestion,
@@ -657,8 +617,10 @@ const MCQSection = ({
   return (
     <div className="max-w-4xl mx-auto">
       {/* Question Navigator */}
-      <div className="bg-slate-800 rounded-xl p-4 mb-6 border border-slate-700">
-        <p className="text-sm text-slate-400 mb-3">Question Progress</p>
+      <div className="bg-white rounded-xl p-4 mb-6 border border-gray-200 shadow-sm">
+        <p className="text-sm text-gray-600 mb-3 font-medium">
+          Question Progress
+        </p>
         <div className="grid grid-cols-10 gap-2">
           {questions.map((_, index) => (
             <button
@@ -666,10 +628,10 @@ const MCQSection = ({
               onClick={() => onGoToQuestion(index)}
               className={`aspect-square rounded-lg text-sm font-medium transition-all ${
                 index === currentIndex
-                  ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white"
+                  ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md"
                   : answers[index] !== -1
-                  ? "bg-green-600 text-white"
-                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                    ? "bg-green-500 text-white shadow-sm"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300"
               }`}
             >
               {index + 1}
@@ -679,21 +641,21 @@ const MCQSection = ({
       </div>
 
       {/* Question Card */}
-      <div className="bg-slate-800 rounded-xl p-8 border border-slate-700 mb-6">
+      <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-md mb-6">
         <div className="flex items-start justify-between mb-6">
           <div>
-            <span className="text-sm text-slate-400">
+            <span className="text-sm text-gray-600 font-medium">
               Question {currentIndex + 1} of 10
             </span>
             {question.category && (
-              <span className="ml-3 px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-xs">
+              <span className="ml-3 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
                 {question.category}
               </span>
             )}
           </div>
         </div>
 
-        <h3 className="text-xl font-semibold mb-6 leading-relaxed">
+        <h3 className="text-xl font-semibold mb-6 leading-relaxed text-gray-800">
           {question.question}
         </h3>
 
@@ -704,23 +666,23 @@ const MCQSection = ({
               onClick={() => onAnswer(currentIndex, index)}
               className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                 answers[currentIndex] === index
-                  ? "border-amber-500 bg-amber-500/10 text-white"
-                  : "border-slate-600 bg-slate-700/50 hover:border-slate-500 text-slate-300"
+                  ? "border-amber-500 bg-gradient-to-r from-amber-50 to-orange-50 text-gray-800 shadow-md"
+                  : "border-gray-300 bg-white hover:border-amber-300 hover:bg-amber-50/30 text-gray-700"
               }`}
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                     answers[currentIndex] === index
                       ? "border-amber-500 bg-amber-500"
-                      : "border-slate-500"
+                      : "border-gray-400 bg-white"
                   }`}
                 >
                   {answers[currentIndex] === index && (
                     <LuCircleCheck className="w-4 h-4 text-white" />
                   )}
                 </div>
-                <span className="flex-1">{option}</span>
+                <span className="flex-1 font-medium">{option}</span>
               </div>
             </button>
           ))}
@@ -732,161 +694,21 @@ const MCQSection = ({
         <button
           onClick={onPrevious}
           disabled={currentIndex === 0}
-          className="px-6 py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-600 rounded-xl font-medium transition-colors"
+          className="px-6 py-3 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 rounded-xl font-medium transition-colors text-gray-700"
         >
           Previous
         </button>
         <button
-          onClick={onNext}
-          className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 rounded-xl font-medium transition-all"
+          onClick={currentIndex === 9 ? onSubmit : onNext}
+          disabled={isSubmitting}
+          className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:from-slate-600 disabled:to-slate-700 rounded-xl font-medium transition-all shadow-md text-white"
         >
-          {currentIndex === 9 ? "Go to Coding Section" : "Next"}
+          {currentIndex === 9
+            ? isSubmitting
+              ? "Submitting..."
+              : "Submit Test"
+            : "Next"}
         </button>
-      </div>
-    </div>
-  );
-};
-
-// Coding Section Component
-const CodingSection = ({
-  questions,
-  currentIndex,
-  answers,
-  onCodeChange,
-  onNext,
-  onPrevious,
-  onBackToMCQ,
-  onSubmit,
-  isSubmitting,
-}) => {
-  const question = questions[currentIndex];
-
-  return (
-    <div className="max-w-6xl mx-auto">
-      {/* Question Navigator */}
-      <div className="bg-slate-800 rounded-xl p-4 mb-6 border border-slate-700 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <LuCode className="w-5 h-5 text-amber-500" />
-          <span className="font-medium">Coding Problems</span>
-        </div>
-        <div className="flex gap-2">
-          {questions.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => (index === 0 ? onPrevious() : null)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                index === currentIndex
-                  ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white"
-                  : answers[index]?.code?.trim()
-                  ? "bg-green-600 text-white"
-                  : "bg-slate-700 text-slate-300"
-              }`}
-            >
-              Problem {index + 1}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Problem Description */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 overflow-y-auto max-h-[600px]">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold">{question.title}</h3>
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                question.difficulty === "Easy"
-                  ? "bg-green-500/20 text-green-400"
-                  : question.difficulty === "Medium"
-                  ? "bg-amber-500/20 text-amber-400"
-                  : "bg-red-500/20 text-red-400"
-              }`}
-            >
-              {question.difficulty}
-            </span>
-          </div>
-
-          <div className="prose prose-invert prose-sm max-w-none">
-            <div className="whitespace-pre-wrap text-slate-300">
-              {question.description}
-            </div>
-          </div>
-
-          {question.testCases && question.testCases.length > 0 && (
-            <div className="mt-6">
-              <h4 className="font-semibold mb-3 text-amber-400">
-                Sample Test Cases:
-              </h4>
-              <div className="space-y-3">
-                {question.testCases.map((testCase, index) => (
-                  <div
-                    key={index}
-                    className="bg-slate-900 rounded-lg p-3 font-mono text-sm"
-                  >
-                    <div className="text-slate-400 text-xs mb-1">Input:</div>
-                    <div className="text-green-400 mb-2">{testCase.input}</div>
-                    <div className="text-slate-400 text-xs mb-1">Output:</div>
-                    <div className="text-blue-400">
-                      {testCase.expectedOutput}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Code Editor */}
-        <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-          <div className="bg-slate-900 px-4 py-2 border-b border-slate-700">
-            <span className="text-sm text-slate-400">JavaScript</span>
-          </div>
-          <textarea
-            value={answers[currentIndex]?.code || question.starterCode || ""}
-            onChange={(e) => onCodeChange(currentIndex, e.target.value)}
-            className="w-full h-[550px] bg-slate-900 text-white font-mono text-sm p-4 focus:outline-none resize-none"
-            placeholder="// Write your solution here..."
-            spellCheck={false}
-          />
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <div className="flex justify-between gap-4">
-        <button
-          onClick={currentIndex === 0 ? onBackToMCQ : onPrevious}
-          className="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-medium transition-colors"
-        >
-          {currentIndex === 0 ? "Back to MCQs" : "Previous Problem"}
-        </button>
-
-        <div className="flex gap-3">
-          {currentIndex < 1 && (
-            <button
-              onClick={onNext}
-              className="px-6 py-3 bg-amber-600 hover:bg-amber-700 rounded-xl font-medium transition-colors"
-            >
-              Next Problem
-            </button>
-          )}
-          <button
-            onClick={onSubmit}
-            disabled={isSubmitting}
-            className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-slate-600 disabled:to-slate-700 rounded-xl font-bold transition-all flex items-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <SpinnerLoader />
-                Submitting...
-              </>
-            ) : (
-              <>
-                <LuCircleCheck className="w-5 h-5" />
-                Submit Test
-              </>
-            )}
-          </button>
-        </div>
       </div>
     </div>
   );

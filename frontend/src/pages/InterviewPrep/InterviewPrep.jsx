@@ -9,9 +9,9 @@ import {
   LuMic,
   LuFileCode,
 } from "react-icons/lu";
-import SpinnerLoader from "../../components/Loader/SpinnerLoader";
+import SpinnerLoader from "../../components/Loader/SpinnerLoader.jsx";
 import { toast } from "react-hot-toast";
-import { DashboardLayout } from "../../components/layouts/DashboardLayout";
+import DashboardLayout from "../../components/layouts/DashboardLayout";
 import Modal from "../../components/Modal";
 
 import QuestionCard from "../../components/Cards/QuestionCard.jsx";
@@ -253,20 +253,39 @@ const InterviewPrep = () => {
 
                   {/* Load More Questions button for modules */}
                   {!isLoading && sessionData?.modules?.length > 0 && (
-                    <div className="flex items-center justify-center mt-6">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center justify-center mt-8"
+                    >
                       <button
-                        className="group flex items-center gap-2 text-sm font-medium text-gray-700 px-4 py-2 rounded-lg border border-amber-200 hover:bg-amber-50 hover:border-amber-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="group relative flex items-center gap-3 text-sm font-semibold text-white px-8 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 overflow-hidden"
                         disabled={isLoading || isUpdateLoader}
                         onClick={uploadMoreQuestions}
                       >
+                        {/* Animated background effect */}
+                        <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></span>
+
                         {isUpdateLoader ? (
-                          <SpinnerLoader />
+                          <>
+                            <SpinnerLoader />
+                            <span>Loading Questions...</span>
+                          </>
                         ) : (
-                          <LuListCollapse className="text-base group-hover:rotate-180 transition-transform duration-300" />
-                        )}{" "}
-                        Load More
+                          <>
+                            <LuListCollapse className="text-lg group-hover:rotate-180 transition-transform duration-500" />
+                            <span>Load More Questions</span>
+                            <motion.div
+                              animate={{ y: [0, -2, 0] }}
+                              transition={{ repeat: Infinity, duration: 1.5 }}
+                              className="text-xs bg-white/20 px-2 py-1 rounded-full"
+                            >
+                              +10
+                            </motion.div>
+                          </>
+                        )}
                       </button>
-                    </div>
+                    </motion.div>
                   )}
                 </>
               ) : (
@@ -304,20 +323,42 @@ const InterviewPrep = () => {
                           />
                           {!isLoading &&
                             sessionData?.questions?.length == index + 1 && (
-                              <div className="flex items-center justify-center mt-6">
+                              <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex items-center justify-center mt-8"
+                              >
                                 <button
-                                  className="group flex items-center gap-2 text-sm font-medium text-gray-700 px-4 py-2 rounded-lg border border-amber-200 hover:bg-amber-50 hover:border-amber-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="group relative flex items-center gap-3 text-sm font-semibold text-white px-8 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 overflow-hidden"
                                   disabled={isLoading || isUpdateLoader}
                                   onClick={uploadMoreQuestions}
                                 >
+                                  {/* Animated background effect */}
+                                  <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></span>
+
                                   {isUpdateLoader ? (
-                                    <SpinnerLoader />
+                                    <>
+                                      <SpinnerLoader />
+                                      <span>Loading Questions...</span>
+                                    </>
                                   ) : (
-                                    <LuListCollapse className="text-base group-hover:rotate-180 transition-transform duration-300" />
-                                  )}{" "}
-                                  Load More
+                                    <>
+                                      <LuListCollapse className="text-lg group-hover:rotate-180 transition-transform duration-500" />
+                                      <span>Load More Questions</span>
+                                      <motion.div
+                                        animate={{ y: [0, -2, 0] }}
+                                        transition={{
+                                          repeat: Infinity,
+                                          duration: 1.5,
+                                        }}
+                                        className="text-xs bg-white/20 px-2 py-1 rounded-full"
+                                      >
+                                        +10
+                                      </motion.div>
+                                    </>
+                                  )}
                                 </button>
-                              </div>
+                              </motion.div>
                             )}
                         </>
                       </motion.div>
