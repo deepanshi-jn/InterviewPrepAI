@@ -60,7 +60,7 @@ const Login = ({ setCurrentPage, closeModal }) => {
   };
 
   return (
-    <div className="w-full max-w-md p-6 flex flex-col justify-center bg-white">
+    <div className="w-full flex flex-col justify-center bg-transparent">
       {/* Header */}
       <div className="mb-5">
         <h3 className="text-xl font-semibold text-gray-800">Welcome Back</h3>

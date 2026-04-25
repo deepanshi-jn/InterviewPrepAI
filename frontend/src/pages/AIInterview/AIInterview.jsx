@@ -63,6 +63,19 @@ const AIInterview = () => {
     return () => clearInterval(interval);
   }, [timerActive, timeRemaining, interviewComplete]);
 
+  // Prevent accidental navigation/closing tab
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (!interviewComplete && !isLoading) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [interviewComplete, isLoading]);
+
   // Format time as MM:SS
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -342,16 +355,28 @@ const AIInterview = () => {
     <DashboardLayout>
       <div className="min-h-screen bg-[#FFFCEF] py-6">
         <div className="max-w-5xl mx-auto px-4">
-          {/* Header */}
-          <div className="mb-6">
+          {/* Header Controls */}
+          <div className="flex justify-between items-center mb-4">
             <button
               onClick={handleBackClick}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors"
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
             >
               <LuArrowLeft className="w-5 h-5" />
               Back
             </button>
+            
+            {!interviewComplete && (
+              <button
+                onClick={handleBackClick}
+                className="flex items-center gap-2 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-xl transition-colors font-medium border border-red-100"
+              >
+                <LuTriangleAlert className="w-4 h-4" />
+                End Interview
+              </button>
+            )}
+          </div>
 
+          <div className="mb-6">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-amber-100 shadow-lg shadow-amber-500/10">
               <div className="flex items-center justify-between">
                 <div>

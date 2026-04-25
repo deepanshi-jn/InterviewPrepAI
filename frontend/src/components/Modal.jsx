@@ -1,11 +1,11 @@
 import React from "react";
 
-const Modal = ({ children, isOpen, onClose, title, hideHeader }) => {
+const Modal = ({ children, isOpen, onClose, title, hideHeader, modalClassName = "max-w-2xl bg-white shadow-lg rounded-2xl" }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/40 w-full h-full p-4">
+    <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/40 backdrop-blur-sm w-full h-full p-4">
       <div
-        className={`relative flex flex-col bg-white shadow-lg rounded-lg overflow-hidden max-w-2xl w-auto my-auto`}
+        className={`relative flex flex-col overflow-hidden w-auto my-auto ${modalClassName}`}
       >
         {!hideHeader && (
           <div className="flex justify-between items-center p-4 border-b border-gray-200">
@@ -15,18 +15,18 @@ const Modal = ({ children, isOpen, onClose, title, hideHeader }) => {
 
         <button
           type="button"
-          className="text-gray-400 bg-transparent hover:bg-gray-100 hover:text-gray-900 rounded-lg text-sm w-8 h-8 flex justify-center items-center absolute top-3.5 right-3.5 cursor-pointer z-10"
+          className="text-gray-400 bg-black/5 backdrop-blur hover:bg-black/10 hover:text-gray-900 rounded-full text-sm w-8 h-8 flex justify-center items-center absolute top-4 right-4 cursor-pointer z-50 transition-all border border-black/5 shadow-sm"
           onClick={onClose}
         >
           <svg
-            className="w-3 h-3"
+            className="w-3.5 h-3.5"
             aria-hidden="true"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 14 14"
           >
             <path
-              stroke="currentColor"
+              stroke="gray"
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="2"
@@ -35,7 +35,7 @@ const Modal = ({ children, isOpen, onClose, title, hideHeader }) => {
           </svg>
         </button>
 
-        <div className="overflow-y-auto custom-scrollbar max-h-[90vh]">
+        <div className="overflow-y-auto overflow-x-hidden custom-scrollbar max-h-[90vh]">
           {children}
         </div>
       </div>

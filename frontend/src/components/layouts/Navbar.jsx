@@ -11,7 +11,7 @@ export const Navbar = () => {
   };
 
   return (
-    <div className="h-16 bg-white border border-b border-gray-200/50 backdrop-blur-[2px] py-2.5 px-4 md:px-6 lg:px-8 sticky top-0 z-3">
+    <div className="h-16 bg-white/90 border-b border-gray-200/50 backdrop-blur-md py-2.5 px-4 md:px-6 lg:px-8 sticky top-0 z-40">
       <div className="container mx-auto flex justify-between gap-5 items-center">
         <div className="flex items-center gap-6">
           <Link to="/dashboard">
