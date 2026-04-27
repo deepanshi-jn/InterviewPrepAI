@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axiosInstance from "../utils/axiosInstance";
 import { API_PATHS } from "../utils/apiPaths";
-import SpinnerLoader from "../components/loader/SpinnerLoader.jsx";
+import SpinnerLoader from "./Loader/SpinnerLoader";
 
 const TwoFactorSettings = () => {
   const [isEnabled, setIsEnabled] = useState(false);
