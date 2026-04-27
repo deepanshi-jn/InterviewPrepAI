@@ -19,7 +19,7 @@ const LandingPage = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   const { scrollYProgress } = useScroll();
-  const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
+  const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "0%"]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
   useEffect(() => {
@@ -154,16 +154,13 @@ const LandingPage = () => {
         {/* Hero Image Parallax / Tilt Section */}
         <div className="w-full relative z-20 px-4 md:px-8">
           <motion.div 
-            style={{ y: heroY, opacity }}
-            className="max-w-6xl mx-auto -mt-[80px] md:-mt-[120px] mb-20 perspective-[2000px]"
+            style={{ y: heroY }}
+            className="max-w-6xl mx-auto -mt-[80px] md:-mt-[120px] mb-6 md:mb-12 perspective-[2000px]"
           >
             <motion.div
-              whileHover={{ rotateY: mousePosition.x * 0.5, rotateX: -mousePosition.y * 0.5, scale: 1.01 }}
-              transition={{ type: "spring", stiffness: 100, damping: 20 }}
-              className="relative rounded-2xl md:rounded-[2rem] border-4 border-white shadow-[0_30px_60px_-15px_rgba(251,191,36,0.3)] overflow-hidden bg-white/50 backdrop-blur-sm"
+              className="relative rounded-2xl md:rounded-[1rem] border-4 border-[#FED7AA] overflow-hidden"
               style={{ transformStyle: "preserve-3d" }}
             >
-              <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/10 to-transparent pointer-events-none z-10" />
               <img
                 src={HERO_IMG}
                 alt="AI Interview Platform Hero"
@@ -174,7 +171,7 @@ const LandingPage = () => {
         </div>
 
         {/* Infinite Marquee Section */}
-        <div className="w-full overflow-hidden bg-white/60 py-10 border-y border-amber-100 relative z-20">
+        <div className="w-full overflow-hidden bg-white/60 py-10 md:py-10 border-y border-amber-100 relative ">
           <div className="max-w-7xl mx-auto px-4 mb-6">
             <p className="text-center text-sm font-bold text-slate-400 uppercase tracking-widest">Master technologies trusted by industry leaders</p>
           </div>
